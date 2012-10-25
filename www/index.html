@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Nantes Open Data</title>
+	<link rel="stylesheet"  href="css/jquery.mobile-1.2.0.min.css" />
+	<script src="js/jquery.js"></script>
+	<script src="js/jquery.mobile-1.2.0.min.js"></script>
+    <script src="js/openData.js"></script>
+    <script type="text/javascript">
+        var loadingDataAgencies = true;
+        var loadingFileFormats = true;
+        var loadingLicences = true;
+        
+        function hidePageLoading() {
+            if(!loadingDataAgencies && !loadingFileFormats && !loadingLicences) {
+                $.mobile.loading('hide');
+            }
+        }
+        
+        function initializeLicences() {
+            var url = $.openData('getLicences');
+            $.getJSON(url, function(data){
+                //console.log(JSON.stringify(data));
+
+                if($.openData('hasValidOpenDataStatusCode', data)) {
+                    var markup = "";
+                    markup += "<option value='";
+                    markup += data.opendata.answer.data.licence.id;
+                    markup += "'>";
+                    markup += data.opendata.answer.data.licence.name;
+                    markup += "</option>";
+                    $("#id_licences").append(markup);
+                }else {
+                    jQuery("#errorPopup").popup("open");
+                }
+                      
+                loadingLicences = true;
+                hidePageLoading();
+            });
+        }
+
+
+        function initializeFileFormats() {
+            var url = $.openData('getFileFormats');
+            $.getJSON(url, function(data){
+                //console.log(JSON.stringify(data));
+
+                if($.openData('hasValidOpenDataStatusCode', data)) {
+                    var markup = "";
+                    $.each(data.opendata.answer.data.fileformat, function(i, val) {
+                        markup += "<option value='";
+                        markup += val.id;
+                        markup += "'>";
+                        markup += val.name;
+                        markup += "</option>";
+                    });
+                    $("#id_fileformats").append(markup);
+                }else {
+                    jQuery("#errorPopup").popup("open");
+                }
+                      
+                loadingFileFormats = false;
+                hidePageLoading();                      
+            });
+        }
+
+        function initializeDataAgencies() {
+            var url = $.openData('getDataAgenciesUrl');
+            $.getJSON(url, function(data){
+                //console.log(JSON.stringify(data));
+
+                if($.openData('hasValidOpenDataStatusCode', data)) {
+                    var markup = "";
+                    $.each(data.opendata.answer.data.agency, function(i, val) {
+                        markup += "<option value='";
+                        markup += val.id;
+                        markup += "'>";
+                        markup += val.name;
+                        markup += "</option>";
+                    });
+                    $("#id_agencies").append(markup);
+                }else {
+                    jQuery("#errorPopup").popup("open");
+                }
+                
+                loadingDataAgencies = false;
+                hidePageLoading();                      
+            });
+        }
+
+        $(document).bind('mobileinit',function(){
+            $.mobile.loader.prototype.options.text = "Chargement des données";
+            loadingDataAgencies = true;
+            loadingFileFormats = true;
+            loadingLicences = true;
+                         
+            $.mobile.loader.prototype.options.textVisible = true;
+            $.mobile.loader.prototype.options.theme = "a";                         
+            //spécifique à phonegap
+            $.support.cors = true;
+            $.mobile.allowCrossDomainPages = true;
+            $.mobile.phonegapNavigationEnabled = true
+        });
+
+        $("#page").live('pageinit',function(event){
+            $.mobile.showPageLoadingMsg();
+            $.mobile.loading('show');
+            initializeDataAgencies();
+            initializeFileFormats();
+            initializeLicences();
+
+            $('#target').submit(function() {
+                //on nettoie les paramètres
+                var fields = $(":input").openData('prepareForm', ['Aucun', 'Aucune']);
+                console.log(fields);
+
+                //on redirige vers la page voulue avec les bons paramètres
+                if($.openData('isBlank', fields)) {
+                    window.location.href = "./catalog-list.html";
+                } else {
+                    window.location.href = "./catalog-list.html?"+fields;
+                }
+
+                return false;
+            });
+        });
+    </script>
+</head>
+<body data-theme="a">
+<!--
+Pour le lancemnt en standalone dans chrome:
+open /Applications/Google\ Chrome.app --args --allow-file-access-from-files
+-->
+
+<div data-role="page" class="type-home" id="page">
+    <div data-role="header">
+        <h1>Le catalogue de l'Open Data Nantais</h1>
+    </div>
+	<div data-role="content">
+        <form data-transition="flow" data-ajax="false" method="get" action="" id="target"
+              class="ui-body ui-body-c ui-corner-all ui-shadow-inset ui-mini">
+            <div data-role="fieldcontain">
+                <label for="id_agencies">Gestionnaires:</label>
+                <select id="id_agencies" name="param[agencies]" multiple="multiple">
+                    <option>Aucun</option>
+                </select>
+            </div>
+
+            <div data-role="fieldcontain">
+                <label for="id_fileformats">Format des données</label>
+                <select id="id_fileformats" name="param[fileformats]" multiple="multiple">
+                    <option>Aucun</option>
+                </select>
+            </div>
+
+            <div data-role="fieldcontain">
+                <label for="id_licences">Type de licence</label>
+                <select id="id_licences" name="param[licences]" multiple="multiple">
+                    <option>Aucune</option>
+                </select>
+            </div>
+
+            <div data-role="fieldcontain">
+                <label for="id_released">Date de mise à disposition</label>
+                <input type="date" name="param[released]" id="id_released"/>
+            </div>
+
+            <div data-role="fieldcontain">
+                <label for="id_updated">Date de mise à jour</label>
+                <input type="date" name="param[updated]" id="id_updated"/>
+            </div>
+
+            <div class="ui-grid-a" id="nogrid_border">
+                <div class="ui-block-a">&nbsp;</div>
+                <div class="ui-block-b">
+                    <button type="submit" data-mini="true" data-inline="true" data-theme="d">Rechercher</button>
+                </div>
+            </div>
+        </form>
+	</div>
+
+    <div data-role="footer" class="footer-docs ui-footer ui-bar-c" role="contentinfo">
+        <div data-role="popup" id="errorPopup" data-overlay-theme="a" data-theme="c" style="max-width:400px;" class="ui-corner-all ui-popup ui-body-c ui-overlay-shadow" aria-disabled="false" data-disabled="false" data-shadow="true" data-corners="true" data-transition="none" data-position-to="origin">
+            <div data-role="header" data-theme="a" class="ui-corner-top ui-header ui-bar-a" role="banner">
+    	        <h1 class="ui-title" role="heading" aria-level="1">Erreur</h1>
+    	    </div>
+    	    <div data-role="content" data-theme="d" class="ui-corner-bottom ui-content ui-body-d" role="main">
+    	        <h3 class="ui-title">Erreur d'accès au catalogue Nantes Open Data</h3>
+    		    <p>Veuillez réssayer plus tard.</p>
+    		    <a href="#" data-role="button" data-inline="true" data-rel="back" data-transition="flow" data-theme="b" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" class="ui-btn ui-btn-up-b ui-shadow ui-btn-corner-all ui-btn-inline"><span class="ui-btn-inner ui-btn-corner-all"><span class="ui-btn-text">OK</span></span></a>
+    	    </div>
+        </div>
+        <p>Les données proviennent de <a href="http://data.nantes.fr/licence/">Nantes Métropole et la Ville de Nantes</a></p>
+    </div>
+</div>
+</body>
+</html>

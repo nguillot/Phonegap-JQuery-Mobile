@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Nantes Open Data</title>
+	<link rel="stylesheet"  href="css/jquery.mobile-1.2.0.min.css" />
+	<script src="js/jquery.js"></script>
+	<script src="js/jquery.mobile-1.2.0.min.js"></script>
+    <script src="js/openData.js"></script>
+    <script>
+        function parseDataSet(data) {
+            //console.log(JSON.stringify(data));
+            if($.openData('hasValidOpenDataStatusCode', data)) {
+                var dataset = data.opendata.answer.data.dataset;
+                if(dataset) {
+                    var markup = "";
+                    $.each(dataset, function(i, val) {
+                        markup += "<li data-corners='false' data-shadow='false' data-wrapperels='div' class='ui-li ui-li-static ui-btn-up-c'>";
+                        markup += "<h3>";
+                        markup += val.title;
+                        markup += "</h3><p class='ui-li-desc'><strong>Date de sortie:</strong> ";
+                        markup += $.openData('parseDate', val.released);
+                        markup += " | <strong>Date de mise à jour:</strong> ";
+                        markup += $.openData('parseDate', val.updated);
+                        markup += "</p><p class='ui-li-desc'><strong>Format(s):</strong>";
+                        if(jQuery.isArray(val.files.file)) {
+                            var lg = val.files.file.length;
+                            $.each(val.files.file, function(i2, f) {
+                                if(i2 < (lg - 1)) {
+                                    markup += " "+ f.format+"," ;
+                                } else {
+                                    markup += " "+f.format;
+                                }
+                            });
+                        } else {
+                            markup += " "+val.files.file.format;
+                        }
+                        markup += "</p></li>";
+                    });
+                    $("#list").html(markup);
+                }
+            }else {
+                jQuery("#errorPopup").popup("open");
+            }
+            $.mobile.loading('hide');
+        }
+    
+        function parseSearchDataSet(data) {
+            //console.log(JSON.stringify(data));
+    
+            if($.openData('hasValidOpenDataStatusCode', data)) {
+                var dataset = data.opendata.answer.data.dataset;
+                var datasetIds = "";
+                $.each(dataset, function(i, val) {
+                    if(i < (dataset.length - 1)) {
+                        datasetIds += val.id +",";
+                    } else {
+                        datasetIds += val.id;
+                    }
+                });
+    
+                var url = $.openData('getDatasetsUrl', datasetIds);
+                $.getJSON(url, parseDataSet);
+            }else {
+                jQuery("#errorPopup").popup("open");
+            }
+        }
+    
+        $(document).bind('mobileinit',function(){
+            $.mobile.loader.prototype.options.text = "Chargement des données";
+            $.mobile.loader.prototype.options.textVisible = true;
+            $.mobile.loader.prototype.options.theme = "a";
+            //spécifique à phonegap
+            $.support.cors = true;
+            $.mobile.allowCrossDomainPages = true;
+            $.mobile.phonegapNavigationEnabled = true
+        });
+        $("#page").live('pageinit',function(event){
+            $.mobile.loading('show');
+            var fields = window.location.search.substring(1);
+            //console.log(fields);
+            var url;
+            if(fields) {
+                url = $.openData('getSearchDataSetUrl', fields);
+            } else {
+                url = $.openData('getSearchDataSetUrl', null);
+            }
+            $.getJSON(url, parseSearchDataSet);
+        });
+    </script>    
+</head>
+<body data-theme="a">
+
+<div data-role="page" class="type-interior ui-page ui-body-c ui-page-active" id="page">
+    <div data-role="header">
+        <a href="./index.html" data-ajax="false" data-icon="arrow-l">Back</a>
+        <h1>Le catalogue de l'Open Data Nantais</h1>
+    </div>
+	<div data-role="content">
+        <ul data-role="listview" data-filter="true" data-filter-placeholder="Filtrer" class="ui-listview" id="list"></ul>
+
+
+        <div data-role="popup" id="errorPopup" data-overlay-theme="a" data-theme="c" style="max-width:400px;" class="ui-corner-all ui-popup ui-body-c ui-overlay-shadow" aria-disabled="false" data-disabled="false" data-shadow="true" data-corners="true" data-transition="none" data-position-to="origin">
+            <div data-role="header" data-theme="a" class="ui-corner-top ui-header ui-bar-a" role="banner">
+    	        <h1 class="ui-title" role="heading" aria-level="1">Erreur</h1>
+    	    </div>
+    	    <div data-role="content" data-theme="d" class="ui-corner-bottom ui-content ui-body-d" role="main">
+    	        <h3 class="ui-title">Erreur d'accès au catalogue Nantes Open Data</h3>
+    		    <p>Veuillez réssayer plus tard.</p>
+    		    <a href="#" data-role="button" data-inline="true" data-rel="back" data-transition="flow" data-theme="b" data-corners="true" data-shadow="true" data-iconshadow="true" data-wrapperels="span" class="ui-btn ui-btn-up-b ui-shadow ui-btn-corner-all ui-btn-inline"><span class="ui-btn-inner ui-btn-corner-all"><span class="ui-btn-text">OK</span></span></a>
+    	    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
